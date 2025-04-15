@@ -1,0 +1,9 @@
+[build]
+  command = "pnpm build"
+  publish = ".next"
+
+[build.environment]
+  NEXT_PUBLIC_API_BASE_URL = "https://www.alphavantage.co/query"
+
+# Note: Do NOT put your actual API key in this file
+# Add it through the Netlify UI instead 
