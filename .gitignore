@@ -42,3 +42,5 @@ next-env.d.ts
 
 /BAK
 /_DEV
+# Local Netlify folder
+.netlify

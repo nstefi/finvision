@@ -42,172 +42,92 @@ async function fetchWithRetry(url: string, retries = 3, timeout = 10000) {
   }
 }
 
-// This server action fetches stock data with improved error handling and debugging
+// This server action fetches stock data
 export async function fetchStockData(symbols: string[], period: string) {
-  try {
-    const apiKey = process.env.ALPHA_VANTAGE_API_KEY
-    const hasApiKey = logApiKeyStatus()
-
-    if (!apiKey) {
-      console.warn("ALPHA_VANTAGE_API_KEY environment variable is not set, using simulated data")
-      const endDate = new Date()
-      let startDate: Date
-      switch (period) {
-        case "1w":
-          startDate = subDays(endDate, 7)
-          break
-        case "1m":
-          startDate = subMonths(endDate, 1)
-          break
-        case "3m":
-          startDate = subMonths(endDate, 3)
-          break
-        case "1y":
-          startDate = subYears(endDate, 1)
-          break
-        default:
-          startDate = subMonths(endDate, 1)
-      }
-      const data = generateSimulatedStockData(symbols, startDate, endDate, period)
-      data._simulated = true
-      return data
-    }
-
-    console.log("Fetching historical data from Alpha Vantage API...")
-
-    // Get historical data for all symbols
-    const historicalData: Record<string, any[]> = {}
-
-    // Fetch data for each symbol
-    for (const symbol of symbols) {
-      try {
-        const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${symbol}&outputsize=full&apikey=${apiKey}`
-        const data = await fetchWithRetry(url)
-
-        if (data["Time Series (Daily)"]) {
-          const timeSeriesData = data["Time Series (Daily)"]
-          const dates = Object.keys(timeSeriesData).sort()
-
-          // Filter dates based on period
-          const endDate = new Date()
-          let startDate: Date
-          switch (period) {
-            case "1w":
-              startDate = subDays(endDate, 7)
-              break
-            case "1m":
-              startDate = subMonths(endDate, 1)
-              break
-            case "3m":
-              startDate = subMonths(endDate, 3)
-              break
-            case "1y":
-              startDate = subYears(endDate, 1)
-              break
-            default:
-              startDate = subMonths(endDate, 1)
-          }
-
-          const filteredDates = dates.filter(date => {
-            const dateObj = new Date(date)
-            return dateObj >= startDate && dateObj <= endDate
-          })
-
-          historicalData[symbol] = filteredDates.map(date => ({
-            date,
-            price: parseFloat(timeSeriesData[date]["4. close"])
-          }))
-
-          console.log(`Got historical data for ${symbol}: ${filteredDates.length} data points`)
-        }
-      } catch (error) {
-        console.error(`Error fetching data for ${symbol}:`, error)
-      }
-    }
-
-    // If we couldn't get any historical data, use simulated data
-    if (Object.keys(historicalData).length === 0) {
-      console.warn("No historical data available, using fully simulated data")
-      const endDate = new Date()
-      let startDate: Date
-      switch (period) {
-        case "1w":
-          startDate = subDays(endDate, 7)
-          break
-        case "1m":
-          startDate = subMonths(endDate, 1)
-          break
-        case "3m":
-          startDate = subMonths(endDate, 3)
-          break
-        case "1y":
-          startDate = subYears(endDate, 1)
-          break
-        default:
-          startDate = subMonths(endDate, 1)
-      }
-      const data = generateSimulatedStockData(symbols, startDate, endDate, period)
-      data._simulated = true
-      return data
-    }
-
-    // Convert historical data to the format expected by the chart
-    const result: any[] = []
-    const allDates = new Set<string>()
-
-    // Collect all unique dates
-    Object.values(historicalData).forEach(symbolData => {
-      symbolData.forEach(dataPoint => {
-        allDates.add(dataPoint.date)
-      })
-    })
-
-    // Sort dates
-    const sortedDates = Array.from(allDates).sort()
-
-    // Create data points for each date
-    sortedDates.forEach(date => {
-      const dataPoint: Record<string, any> = {
-        date,
-        formattedDate: format(new Date(date), period === "1y" ? "MMM yyyy" : "MMM dd")
-      }
-
-      symbols.forEach(symbol => {
-        const symbolData = historicalData[symbol]
-        const dateData = symbolData?.find(d => d.date === date)
-        dataPoint[symbol] = dateData?.price || null
-      })
-
-      result.push(dataPoint)
-    })
-
-    return result
-
-  } catch (error) {
-    console.error("Error fetching stock data:", error)
-    // Fall back to simulated data on error
-    const endDate = new Date()
-    let startDate: Date
-    switch (period) {
-      case "1w":
-        startDate = subDays(endDate, 7)
-        break
-      case "1m":
-        startDate = subMonths(endDate, 1)
-        break
-      case "3m":
-        startDate = subMonths(endDate, 3)
-        break
-      case "1y":
-        startDate = subYears(endDate, 1)
-        break
-      default:
-        startDate = subMonths(endDate, 1)
-    }
-    const data = generateSimulatedStockData(symbols, startDate, endDate, period)
-    data._simulated = true
-    return data
+  const apiKey = process.env.ALPHA_VANTAGE_API_KEY
+  if (!apiKey) {
+    throw new Error("ALPHA_VANTAGE_API_KEY environment variable is not set")
   }
+
+  // Get historical data for all symbols
+  const historicalData: Record<string, any[]> = {}
+
+  // Fetch data for each symbol
+  for (const symbol of symbols) {
+    try {
+      const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${symbol}&outputsize=full&apikey=${apiKey}`
+      const data = await fetchWithRetry(url)
+
+      if (data["Time Series (Daily)"]) {
+        const timeSeriesData = data["Time Series (Daily)"]
+        const dates = Object.keys(timeSeriesData).sort()
+
+        // Filter dates based on period
+        const endDate = new Date()
+        let startDate: Date
+        switch (period) {
+          case "1w":
+            startDate = subDays(endDate, 7)
+            break
+          case "1m":
+            startDate = subMonths(endDate, 1)
+            break
+          case "3m":
+            startDate = subMonths(endDate, 3)
+            break
+          case "1y":
+            startDate = subYears(endDate, 1)
+            break
+          default:
+            startDate = subMonths(endDate, 1)
+        }
+
+        const filteredDates = dates.filter(date => {
+          const dateObj = new Date(date)
+          return dateObj >= startDate && dateObj <= endDate
+        })
+
+        historicalData[symbol] = filteredDates.map(date => ({
+          date,
+          price: parseFloat(timeSeriesData[date]["4. close"])
+        }))
+      }
+    } catch (error) {
+      console.error(`Error fetching data for ${symbol}:`, error)
+    }
+  }
+
+  // Convert historical data to the format expected by the chart
+  const result: any[] = []
+  const allDates = new Set<string>()
+
+  // Collect all unique dates
+  Object.values(historicalData).forEach(symbolData => {
+    symbolData.forEach(dataPoint => {
+      allDates.add(dataPoint.date)
+    })
+  })
+
+  // Sort dates
+  const sortedDates = Array.from(allDates).sort()
+
+  // Create data points for each date
+  sortedDates.forEach(date => {
+    const dataPoint: Record<string, any> = {
+      date,
+      formattedDate: format(new Date(date), period === "1y" ? "MMM yyyy" : "MMM dd")
+    }
+
+    symbols.forEach(symbol => {
+      const symbolData = historicalData[symbol]
+      const dateData = symbolData?.find(d => d.date === date)
+      dataPoint[symbol] = dateData?.price || null
+    })
+
+    result.push(dataPoint)
+  })
+
+  return result
 }
 
 // Function to generate historical data based on current prices
