@@ -2,20 +2,74 @@ import { NextResponse } from 'next/server'
 import yahooFinance from 'yahoo-finance2'
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai'
 
-// Initialize Google AI Client
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || '')
-const model = genAI.getGenerativeModel({
-    model: "gemini-1.5-flash-latest",
-    safetySettings: [
-        { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-        { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-        { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-        { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-    ]
-})
+// --- Google AI Setup (only initialized if needed) ---
+let genAI: GoogleGenerativeAI | null = null
+let model: any | null = null // Use any for flexibility
 
-// Function to get sentiment and topics using Google AI with retries
-async function getAISentimentAndTopics(title: string, retries = 2): Promise<{ sentiment: string; topics: string[] }> {
+function initializeAI() {
+    if (!genAI) {
+        if (!process.env.GOOGLE_API_KEY) {
+            console.warn('GOOGLE_API_KEY not set. AI analysis disabled.')
+            return false
+        }
+        try {
+            genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY)
+            model = genAI.getGenerativeModel({
+                model: "gemini-2.0-flash-lite",
+                safetySettings: [
+                    { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+                    { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+                    { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+                    { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+                ]
+            })
+            console.log('Google AI Client Initialized.')
+            return true
+        } catch (error) {
+            console.error('Failed to initialize Google AI Client:', error)
+            genAI = null // Ensure it stays null on failure
+            model = null
+            return false
+        }
+    }
+    return true // Already initialized
+}
+
+// --- Hardcoded Logic (Restored) ---
+function determineTopics(title: string): string[] {
+    const lowerTitle = title.toLowerCase()
+    if (lowerTitle.includes('stock') || lowerTitle.includes('market') || lowerTitle.includes('index')) return ['Markets']
+    if (lowerTitle.includes('fed') || lowerTitle.includes('interest rate') || lowerTitle.includes('inflation')) return ['Economic']
+    if (lowerTitle.includes('tech') || lowerTitle.includes('technology') || lowerTitle.includes('ai')) return ['Technology']
+    if (lowerTitle.includes('earnings') || lowerTitle.includes('revenue')) return ['Earnings']
+    if (lowerTitle.includes('crypto') || lowerTitle.includes('bitcoin')) return ['Crypto']
+    return ['General']
+}
+
+function determineSentiment(title: string): string {
+    const lowerTitle = title.toLowerCase()
+    const bullishWords = ['surge', 'jump', 'rise', 'gain', 'high', 'boost', 'growth', 'positive', 'outperform', 'upgrade', 'beat', 'record', 'strong']
+    const bearishWords = ['fall', 'drop', 'decline', 'low', 'loss', 'down', 'crash', 'negative', 'plunge', 'tumble', 'downgrade', 'miss', 'weak']
+    const neutralWords = ['hold', 'maintain', 'stable', 'steady', 'unchanged', 'flat', 'mixed']
+
+    const bullishCount = bullishWords.filter(word => lowerTitle.includes(word)).length
+    const bearishCount = bearishWords.filter(word => lowerTitle.includes(word)).length
+    const neutralCount = neutralWords.filter(word => lowerTitle.includes(word)).length
+
+    if (bullishCount > bearishCount && bullishCount > neutralCount) return 'Bullish'
+    if (bearishCount > bullishCount && bearishCount > neutralCount) return 'Bearish'
+    if (neutralCount > bullishCount && neutralCount > bearishCount) return 'Neutral'
+    if (bullishCount === bearishCount && bullishCount > 0) return 'Mixed'
+    return 'Neutral'
+}
+
+// --- Google AI Analysis Function (with fallback to hardcoded) ---
+async function getAISentimentAndTopics(title: string, retries = 1): Promise<{ sentiment: string; topics: string[] }> {
+    if (!model && !initializeAI()) {
+        // Fallback if AI can't be initialized (e.g., missing key)
+        return { sentiment: determineSentiment(title), topics: determineTopics(title) }
+    }
+
     const prompt = `
         Analyze the sentiment and determine the primary topic for the following financial news headline.
         Headline: "${title}"
@@ -28,63 +82,48 @@ async function getAISentimentAndTopics(title: string, retries = 2): Promise<{ se
 
     for (let attempt = 0; attempt <= retries; attempt++) {
         try {
-            const result = await model.generateContent(prompt)
+            // Add a small base delay to slightly space out even batched requests
+            await new Promise(resolve => setTimeout(resolve, 200 * attempt));
+            const result = await model!.generateContent(prompt) // Use non-null assertion
             const response = result.response
             let text = response.text()
-
-            // Clean the response to extract JSON
             const jsonMatch = text.match(/\{.*\}/s)
-            if (jsonMatch && jsonMatch[0]) {
-                text = jsonMatch[0]
-            }
-
+            if (jsonMatch && jsonMatch[0]) text = jsonMatch[0]
             const analysis = JSON.parse(text)
             return {
-                sentiment: analysis.sentiment || 'Neutral',
-                topics: [analysis.topic || 'General']
+                sentiment: analysis.sentiment || determineSentiment(title), // Fallback within AI logic
+                topics: [analysis.topic || determineTopics(title)[0]]
             }
-        } catch (error) {
+        } catch (error: any) {
+            console.warn(`AI analysis attempt ${attempt + 1} failed for "${title.substring(0, 30)}...": ${error.message}`)
             if (attempt === retries) {
-                console.error(`Failed to analyze after ${retries + 1} attempts:`, error)
-                // Use basic sentiment analysis as fallback
-                return determineBasicSentiment(title)
+                console.error(`AI analysis failed after ${retries + 1} attempts. Falling back to basic analysis.`)
+                return { sentiment: determineSentiment(title), topics: determineTopics(title) } // Final fallback
             }
-            // Wait before retry (exponential backoff)
-            await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000))
+            // Exponential backoff before retry
+            await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt + 1) * 1000))
         }
     }
-
-    return determineBasicSentiment(title)
+    // Should not be reached if retries >= 0, but guarantees return
+    return { sentiment: determineSentiment(title), topics: determineTopics(title) }
 }
 
-// Basic sentiment analysis as fallback
-function determineBasicSentiment(title: string): { sentiment: string; topics: string[] } {
-    const lowerTitle = title.toLowerCase()
-
-    // Simple keyword-based sentiment analysis
-    const bullishWords = ['surge', 'jump', 'rise', 'gain', 'high', 'boost', 'growth', 'positive']
-    const bearishWords = ['fall', 'drop', 'decline', 'low', 'loss', 'down', 'crash', 'negative']
-
-    const bullishCount = bullishWords.filter(word => lowerTitle.includes(word)).length
-    const bearishCount = bearishWords.filter(word => lowerTitle.includes(word)).length
-
-    let sentiment = 'Neutral'
-    if (bullishCount > bearishCount) sentiment = 'Bullish'
-    else if (bearishCount > bullishCount) sentiment = 'Bearish'
-
-    // Simple topic detection
-    let topic = 'General'
-    if (lowerTitle.includes('stock') || lowerTitle.includes('market')) topic = 'Markets'
-    else if (lowerTitle.includes('tech') || lowerTitle.includes('ai')) topic = 'Technology'
-
-    return { sentiment, topics: [topic] }
-}
-
+// --- API Route Handler ---
 export async function GET(request: Request) {
     try {
         const url = new URL(request.url)
         const symbolsParam = url.searchParams.get('symbols')
+        const useAI = url.searchParams.get('useAI') === 'true'
         const symbols = symbolsParam ? symbolsParam.split(',') : ['^GSPC', '^DJI', 'AAPL', 'MSFT', 'GOOGL']
+
+        if (useAI) {
+            console.log('AI Analysis Requested')
+            if (!initializeAI()) {
+                // Handle case where AI cannot be used (e.g. no API key on server)
+                // Maybe return an error or proceed with basic analysis? For now, proceed.
+                console.warn('Proceeding with basic analysis as AI could not be initialized.')
+            }
+        }
 
         // Fetch news with a timeout
         const newsPromises = symbols.map(symbol =>
@@ -104,22 +143,40 @@ export async function GET(request: Request) {
         let newsResults = await Promise.all(newsPromises)
         newsResults = newsResults.flat()
 
-        // Process news in smaller batches to avoid rate limits
-        const batchSize = 5
-        const allAnalyses: { sentiment: string; topics: string[] }[] = []
+        let analyses: { sentiment: string; topics: string[] }[] = []
 
-        for (let i = 0; i < newsResults.length; i += batchSize) {
-            const batch = newsResults.slice(i, i + batchSize)
-            const batchAnalyses = await Promise.all(
-                batch.map(item => getAISentimentAndTopics(item.title))
-            )
-            allAnalyses.push(...batchAnalyses)
+        if (useAI && model) {
+            // Use AI Analysis (Batched)
+            console.log(`Analyzing ${newsResults.length} items with AI...`)
+            const batchSize = 5 // Keep batching
+            for (let i = 0; i < newsResults.length; i += batchSize) {
+                const batch = newsResults.slice(i, i + batchSize)
+                // Run batch requests concurrently
+                const batchAnalyses = await Promise.all(
+                    batch.map(item => getAISentimentAndTopics(item.title))
+                )
+                analyses.push(...batchAnalyses)
+                if (newsResults.length > batchSize) {
+                    // Add a small delay between batches if there are many items
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+            }
+            console.log('AI analysis finished.')
+        } else {
+            // Use Hardcoded Logic
+            console.log(`Analyzing ${newsResults.length} items with basic logic...`)
+            analyses = newsResults.map(item => ({
+                sentiment: determineSentiment(item.title),
+                topics: determineTopics(item.title)
+            }))
+            console.log('Basic analysis finished.')
         }
 
-        // Combine news data with AI analysis and deduplicate
+        // Combine news data with analysis (AI or hardcoded)
         const uniqueNewsMap = new Map()
         newsResults.forEach((item, index) => {
             if (!uniqueNewsMap.has(item.link)) {
+                const analysisResult = analyses[index] || { sentiment: 'Neutral', topics: ['General'] } // Fallback if analysis array mismatch
                 uniqueNewsMap.set(item.link, {
                     title: item.title,
                     url: item.link,
@@ -129,8 +186,8 @@ export async function GET(request: Request) {
                             : item.providerPublishTime
                     ).toISOString(),
                     source: item.publisher,
-                    topics: allAnalyses[index]?.topics || ['General'],
-                    sentiment: allAnalyses[index]?.sentiment || 'Neutral',
+                    topics: analysisResult.topics,
+                    sentiment: analysisResult.sentiment,
                     relatedSymbols: symbols.filter(symbol =>
                         item.title.includes(symbol) ||
                         (symbol === '^GSPC' && (item.title.includes('S&P') || item.title.includes('S&P 500'))) ||

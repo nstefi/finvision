@@ -29,6 +29,7 @@ export function MarketInsights({ page = 'dashboard' }: MarketInsightsProps) {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [watchlistOnly, setWatchlistOnly] = useState(true)
+    const [useAIAnalysis, setUseAIAnalysis] = useState(false)
     const isMobile = useMediaQuery("(max-width: 768px)")
 
     // Set news limits based on page and screen size
@@ -44,8 +45,14 @@ export function MarketInsights({ page = 'dashboard' }: MarketInsightsProps) {
         const fetchNews = async () => {
             try {
                 setLoading(true)
-                // Only include symbols parameter if watchlistOnly is true
-                const queryParams = watchlistOnly ? `?symbols=${watchlistSymbols.join(',')}` : ''
+                // Determine base query parameters
+                let queryParams = watchlistOnly ? `?symbols=${watchlistSymbols.join(',')}` : ''
+                // Add AI parameter if on insights page and toggle is enabled
+                if (page === 'insights' && useAIAnalysis) {
+                    queryParams += queryParams ? '&' : '?'
+                    queryParams += 'useAI=true'
+                }
+
                 const response = await fetch(`/api/yahoo-news${queryParams}`)
                 const data = await response.json()
 
@@ -70,7 +77,7 @@ export function MarketInsights({ page = 'dashboard' }: MarketInsightsProps) {
         }
 
         fetchNews()
-    }, [watchlistOnly]) // Add watchlistOnly to dependency array
+    }, [watchlistOnly, useAIAnalysis, page]) // Add useAIAnalysis and page to dependencies
 
     const getBadgeVariant = (sentiment: string) => {
         switch (sentiment?.toLowerCase()) {
@@ -141,8 +148,9 @@ export function MarketInsights({ page = 'dashboard' }: MarketInsightsProps) {
     return (
         <Card>
             <CardHeader className="pb-2">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center flex-wrap gap-3">
                     <CardTitle>Market Insights</CardTitle>
+
                     <div className="flex items-center space-x-2">
                         <Switch
                             id="watchlist-mode"
@@ -153,9 +161,27 @@ export function MarketInsights({ page = 'dashboard' }: MarketInsightsProps) {
                             {watchlistOnly ? 'Watchlist Only' : 'All Stocks'}
                         </Label>
                     </div>
+
+                    {page === 'insights' && (
+                        <div className="flex items-center space-x-2">
+                            <Switch
+                                id="ai-analysis-mode"
+                                checked={useAIAnalysis}
+                                onCheckedChange={setUseAIAnalysis}
+                                disabled={loading}
+                            />
+                            <Label htmlFor="ai-analysis-mode" className="text-sm font-medium text-muted-foreground">
+                                Tag news using Google AI (Gemini)
+                            </Label>
+                        </div>
+                    )}
                 </div>
                 <CardDescription>
-                    {watchlistOnly ? 'Latest news for watchlist stocks' : 'Latest market news'}
+                    {watchlistOnly
+                        ? 'Latest news for watchlist stocks'
+                        : 'Latest market news'}
+                    {page === 'insights' && useAIAnalysis &&
+                        <span className="text-blue-600"> (AI Analyzed)</span>}
                 </CardDescription>
             </CardHeader>
             <CardContent>
