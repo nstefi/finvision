@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { Sidebar, SidebarContent, SidebarHeader, SidebarFooter } from "@/components/ui/sidebar"
+import { Sidebar, SidebarContent, SidebarHeader, SidebarFooter, SidebarProvider, useSidebar } from "@/components/ui/sidebar"
 import { MainNav } from "@/components/main-nav"
 import { DashboardNav } from "@/components/dashboard-nav"
 import { UserNav } from "@/components/user-nav"
@@ -10,17 +10,24 @@ import { ModeToggle } from "@/components/mode-toggle"
 import { ReactVersion } from "@/components/react-version"
 import { Menu } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { useSidebar } from "@/hooks/use-sidebar"
 
 interface DashboardShellProps {
   children: React.ReactNode
 }
 
 export function DashboardShell({ children }: DashboardShellProps) {
+  return (
+    <SidebarProvider>
+      <DashboardShellContent>{children}</DashboardShellContent>
+    </SidebarProvider>
+  )
+}
+
+function DashboardShellContent({ children }: DashboardShellProps) {
   const { toggleSidebar } = useSidebar()
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen overflow-x-hidden">
       <Sidebar>
         <SidebarHeader className="border-b border-border/40 pb-2">
           <div className="flex items-center px-2">
@@ -34,7 +41,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
           <UserNav />
         </SidebarFooter>
       </Sidebar>
-      <div className="flex flex-1 flex-col">
+      <div className="flex flex-1 flex-col overflow-x-hidden">
         <div className="flex h-16 items-center justify-between border-b px-4">
           <MainNav />
           <div className="flex items-center gap-4">
