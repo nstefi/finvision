@@ -8,12 +8,17 @@ import { DashboardNav } from "@/components/dashboard-nav"
 import { UserNav } from "@/components/user-nav"
 import { ModeToggle } from "@/components/mode-toggle"
 import { ReactVersion } from "@/components/react-version"
+import { Menu } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { useSidebar } from "@/hooks/use-sidebar"
 
 interface DashboardShellProps {
   children: React.ReactNode
 }
 
 export function DashboardShell({ children }: DashboardShellProps) {
+  const { toggleSidebar } = useSidebar()
+
   return (
     <div className="flex min-h-screen">
       <Sidebar>
@@ -33,6 +38,15 @@ export function DashboardShell({ children }: DashboardShellProps) {
         <div className="flex h-16 items-center justify-between border-b px-4">
           <MainNav />
           <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={toggleSidebar}
+              aria-label="Toggle Menu"
+              className="md:hidden"
+            >
+              <Menu className="h-[1.2rem] w-[1.2rem]" />
+            </Button>
             <ModeToggle />
           </div>
         </div>
