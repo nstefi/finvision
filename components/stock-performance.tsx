@@ -7,7 +7,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
 import { StockChart } from "@/components/ui/stock-chart"
 import { useWatchlist } from "@/lib/context/watchlist-context"
-import { AlertCircle } from "lucide-react"
+import { AlertCircle, LineChart } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 interface StockPerformanceProps extends React.HTMLAttributes<HTMLDivElement> { }
@@ -37,21 +37,19 @@ export function StockPerformance({ className, ...props }: StockPerformanceProps)
     let isMounted = true
 
     async function loadStockData() {
-      if (!isMounted) return
+      if (!isMounted || selectedStocks.length === 0) {
+        setIsLoading(false)
+        return
+      }
 
       setIsLoading(true)
       setError(null)
 
       try {
-        // Use selectedStocks if available, otherwise use default stocks
-        const symbols = selectedStocks.length > 0
-          ? selectedStocks
-          : ["AAPL", "MSFT"]
-
-        console.log(`Fetching stock data for: ${symbols.join(", ")}, period: ${period}`)
+        console.log(`Fetching stock data for: ${selectedStocks.join(", ")}, period: ${period}`)
 
         // Use the Next.js API route instead of Netlify function
-        const url = `/api/stock-data?symbols=${symbols.join(',')}&period=${period}`
+        const url = `/api/stock-data?symbols=${selectedStocks.join(',')}&period=${period}`
         console.log(`Calling API endpoint: ${url}`)
 
         const response = await fetch(url)
@@ -117,12 +115,6 @@ export function StockPerformance({ className, ...props }: StockPerformanceProps)
     }
   }, [period, selectedStocks])
 
-  // Filter categories to only include selected stocks
-  const filteredCategories = selectedStocks.length > 0 ? selectedStocks : ["AAPL", "MSFT"]
-
-  // Get colors for selected stocks
-  const selectedColors = filteredCategories.map((symbol) => stockColors[symbol] || "#6b7280")
-
   // Calculate percentage change for each stock
   const calculatePerformance = () => {
     if (stockData.length < 2) return []
@@ -130,7 +122,7 @@ export function StockPerformance({ className, ...props }: StockPerformanceProps)
     const firstDataPoint = stockData[0]
     const lastDataPoint = stockData[stockData.length - 1]
 
-    return filteredCategories.map((symbol) => {
+    return selectedStocks.map((symbol) => {
       const startPrice = firstDataPoint[symbol]
       const endPrice = lastDataPoint[symbol]
 
@@ -183,7 +175,7 @@ export function StockPerformance({ className, ...props }: StockPerformanceProps)
           </Alert>
         )}
 
-        {performance.length > 0 && (
+        {selectedStocks.length > 0 && performance.length > 0 && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
             {performance.map(({ symbol, percentChange, hasData }) => (
               <div key={symbol} className="bg-muted/50 p-2 rounded-lg">
@@ -213,10 +205,18 @@ export function StockPerformance({ className, ...props }: StockPerformanceProps)
             <div className="flex items-center justify-center h-full">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
+          ) : selectedStocks.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-muted-foreground space-y-2">
+              <LineChart className="h-12 w-12 mb-2 opacity-50" />
+              <div className="text-center">
+                <p className="font-medium">No stocks selected</p>
+                <p className="text-sm">Select one or more stocks from the watchlist to compare their performance</p>
+              </div>
+            </div>
           ) : stockData.length > 0 ? (
             <StockChart
               data={stockData}
-              symbols={filteredCategories}
+              symbols={selectedStocks}
               colors={stockColors}
               isLoading={isLoading}
             />

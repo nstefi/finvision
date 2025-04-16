@@ -112,6 +112,35 @@ export function StockChart({
             g.appendChild(text)
         }
 
+        // Add date labels on x-axis
+        const dateCount = Math.min(5, data.length) // Show up to 5 dates
+        for (let i = 0; i < dateCount; i++) {
+            const index = Math.floor((i / (dateCount - 1)) * (data.length - 1))
+            const x = xScale(index)
+
+            // Add vertical grid line
+            const vLine = document.createElementNS('http://www.w3.org/2000/svg', 'line')
+            vLine.setAttribute('x1', x.toString())
+            vLine.setAttribute('y1', '0')
+            vLine.setAttribute('x2', x.toString())
+            vLine.setAttribute('y2', chartHeight.toString())
+            vLine.setAttribute('stroke', gridColor)
+            vLine.setAttribute('stroke-width', '0.5')
+            vLine.setAttribute('stroke-dasharray', '3,3')
+            g.appendChild(vLine)
+
+            // Add date label
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text')
+            text.setAttribute('x', x.toString())
+            text.setAttribute('y', (chartHeight + 20).toString())
+            text.setAttribute('text-anchor', 'middle')
+            text.setAttribute('fill', isDark ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)')
+            text.setAttribute('font-size', '10')
+            text.setAttribute('transform', `rotate(-45, ${x}, ${chartHeight + 20})`)
+            text.textContent = data[index].date
+            g.appendChild(text)
+        }
+
         // Draw lines and areas for each symbol
         symbols.forEach((symbol, symbolIndex) => {
             const color = colors[symbol]

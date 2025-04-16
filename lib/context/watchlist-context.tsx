@@ -11,7 +11,7 @@ interface WatchlistContextType {
 const WatchlistContext = createContext<WatchlistContextType | undefined>(undefined)
 
 export function WatchlistProvider({ children }: { children: ReactNode }) {
-  const [selectedStocks, setSelectedStocks] = useState<string[]>(["AAPL", "MSFT"]) // Default selected stocks
+  const [selectedStocks, setSelectedStocks] = useState<string[]>([]) // Start with empty selection
 
   const toggleStock = (symbol: string) => {
     setSelectedStocks((prev) => (prev.includes(symbol) ? prev.filter((s) => s !== symbol) : [...prev, symbol]))

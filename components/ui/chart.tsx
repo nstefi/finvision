@@ -77,71 +77,72 @@ export function LineChart({
       axisBottom={
         showXAxis
           ? {
-              orient: "bottom",
-              tickSize: 5,
-              tickPadding: 5,
-              tickRotation: -45, // Rotate labels for better readability
-              legend: "",
-              legendOffset: 36,
-              legendPosition: "middle",
-              tickColor: gridColor,
-              tickStrokeWidth: 1,
-              renderTick: (tick) => {
-                return (
-                  <g transform={`translate(${tick.x},${tick.y})`}>
-                    <line stroke={gridColor} strokeWidth={1} y2={6} />
-                    <text
-                      textAnchor="end"
-                      dominantBaseline="middle"
-                      transform="rotate(-45)"
-                      style={{
-                        fontSize: "10px",
-                        fill: textColor,
-                        fontWeight: 500,
-                      }}
-                      y={-5}
-                      x={-5}
-                    >
-                      {tick.value}
-                    </text>
-                  </g>
-                )
-              },
-            }
+            orient: "bottom",
+            tickSize: 5,
+            tickPadding: 5,
+            tickRotation: -45, // Rotate labels for better readability
+            legend: "",
+            legendOffset: 36,
+            legendPosition: "middle",
+            tickColor: gridColor,
+            tickStrokeWidth: 1,
+            renderTick: (tick) => {
+              return (
+                <g transform={`translate(${tick.x},${tick.y})`}>
+                  <line stroke={gridColor} strokeWidth={1} y2={6} />
+                  <text
+                    textAnchor="end"
+                    dominantBaseline="middle"
+                    transform="rotate(-45)"
+                    style={{
+                      fontSize: "10px",
+                      fill: textColor,
+                      fontWeight: 500,
+                    }}
+                    y={-5}
+                    x={-5}
+                  >
+                    {tick.value}
+                  </text>
+                </g>
+              )
+            },
+          }
           : null
       }
       axisLeft={
         showYAxis
           ? {
-              orient: "left",
-              tickSize: 5,
-              tickPadding: 5,
-              tickRotation: 0,
-              format: (value) => valueFormatter(value),
-              legend: "",
-              legendOffset: -40,
-              legendPosition: "middle",
-              tickColor: gridColor,
-              renderTick: (tick) => {
-                return (
-                  <g transform={`translate(${tick.x},${tick.y})`}>
-                    <line stroke={gridColor} strokeWidth={1} x2={-6} />
-                    <text
-                      textAnchor="end"
-                      dominantBaseline="middle"
-                      style={{
-                        fontSize: "10px",
-                        fill: textColor,
-                        fontWeight: 500,
-                      }}
-                      x={-8}
-                    >
-                      {valueFormatter(tick.value)}
-                    </text>
-                  </g>
-                )
-              },
-            }
+            orient: "left",
+            tickSize: 5,
+            tickPadding: 5,
+            tickRotation: 0,
+            format: (value) => valueFormatter(value),
+            legend: "",
+            legendOffset: -40,
+            legendPosition: "middle",
+            tickColor: gridColor,
+            tickValues: 5,
+            renderTick: (tick) => {
+              return (
+                <g transform={`translate(${tick.x},${tick.y})`}>
+                  <line stroke={gridColor} strokeWidth={1} x2={-6} />
+                  <text
+                    textAnchor="end"
+                    dominantBaseline="middle"
+                    style={{
+                      fontSize: "10px",
+                      fill: textColor,
+                      fontWeight: 500,
+                    }}
+                    x={-8}
+                  >
+                    {valueFormatter(Math.round(tick.value))}
+                  </text>
+                </g>
+              )
+            },
+          }
           : null
       }
       enableGridX={showGridLines}
@@ -191,32 +192,32 @@ export function LineChart({
       legends={
         showLegend
           ? [
-              {
-                anchor: "bottom",
-                direction: "row",
-                justify: false,
-                translateX: 0,
-                translateY: 50,
-                itemsSpacing: 10,
-                itemDirection: "left-to-right",
-                itemWidth: 80,
-                itemHeight: 20,
-                itemOpacity: 0.75,
-                symbolSize: 12,
-                symbolShape: "circle",
-                symbolBorderColor: "rgba(0, 0, 0, .5)",
-                itemTextColor: textColor,
-                effects: [
-                  {
-                    on: "hover",
-                    style: {
-                      itemBackground: isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.03)",
-                      itemOpacity: 1,
-                    },
+            {
+              anchor: "bottom",
+              direction: "row",
+              justify: false,
+              translateX: 0,
+              translateY: 50,
+              itemsSpacing: 10,
+              itemDirection: "left-to-right",
+              itemWidth: 80,
+              itemHeight: 20,
+              itemOpacity: 0.75,
+              symbolSize: 12,
+              symbolShape: "circle",
+              symbolBorderColor: "rgba(0, 0, 0, .5)",
+              itemTextColor: textColor,
+              effects: [
+                {
+                  on: "hover",
+                  style: {
+                    itemBackground: isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.03)",
+                    itemOpacity: 1,
                   },
-                ],
-              },
-            ]
+                },
+              ],
+            },
+          ]
           : []
       }
       theme={{
@@ -316,31 +317,31 @@ export function PieChart({
       legends={
         showLegend
           ? [
-              {
-                anchor: legendPosition === "right" ? "right" : "bottom",
-                direction: "column",
-                justify: false,
-                translateX: legendPosition === "right" ? 120 : 0,
-                translateY: legendPosition === "right" ? 0 : 56,
-                itemsSpacing: 10,
-                itemWidth: 100,
-                itemHeight: 20,
-                itemTextColor: textColor, // Use theme-aware text color
-                itemDirection: "left-to-right",
-                itemOpacity: 1,
-                symbolSize: 12,
-                symbolShape: "circle",
-                symbolSpacing: 10,
-                effects: [
-                  {
-                    on: "hover",
-                    style: {
-                      itemTextColor: isDark ? "#ffffff" : "#000000",
-                    },
+            {
+              anchor: legendPosition === "right" ? "right" : "bottom",
+              direction: "column",
+              justify: false,
+              translateX: legendPosition === "right" ? 120 : 0,
+              translateY: legendPosition === "right" ? 0 : 56,
+              itemsSpacing: 10,
+              itemWidth: 100,
+              itemHeight: 20,
+              itemTextColor: textColor, // Use theme-aware text color
+              itemDirection: "left-to-right",
+              itemOpacity: 1,
+              symbolSize: 12,
+              symbolShape: "circle",
+              symbolSpacing: 10,
+              effects: [
+                {
+                  on: "hover",
+                  style: {
+                    itemTextColor: isDark ? "#ffffff" : "#000000",
                   },
-                ],
-              },
-            ]
+                },
+              ],
+            },
+          ]
           : []
       }
       valueFormat={valueFormatter}
