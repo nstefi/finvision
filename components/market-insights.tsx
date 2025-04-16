@@ -11,7 +11,11 @@ interface NewsItem {
     topics: string[]
     sentiment: string
     source: string
+    relatedSymbols: string[]
 }
+
+// Define watchlist symbols (same as in WatchlistCard)
+const watchlistSymbols = ["AAPL", "MSFT", "GOOGL", "AMZN"]
 
 export function MarketInsights() {
     const [news, setNews] = useState<NewsItem[]>([])
@@ -21,7 +25,9 @@ export function MarketInsights() {
     useEffect(() => {
         const fetchNews = async () => {
             try {
-                const response = await fetch('/api/yahoo-news')
+                setLoading(true)
+                const queryParams = `?symbols=${watchlistSymbols.join(',')}`
+                const response = await fetch(`/api/yahoo-news${queryParams}`)
                 const data = await response.json()
 
                 if (!response.ok) {
@@ -50,12 +56,24 @@ export function MarketInsights() {
     const getBadgeVariant = (sentiment: string) => {
         switch (sentiment?.toLowerCase()) {
             case 'bullish':
-                return 'default'
+                return 'outline'
             case 'bearish':
                 return 'destructive'
-            default:
+            case 'mixed':
                 return 'outline'
+            case 'neutral':
+            default:
+                return 'secondary'
         }
+    }
+
+    const getBadgeLabel = (sentiment: string, topic: string) => {
+        // If we have a sentiment, show it along with the topic
+        if (sentiment && sentiment !== 'Neutral') {
+            return `${topic} • ${sentiment}`
+        }
+        // Otherwise just show the topic
+        return topic
     }
 
     const getTimeAgo = (timestamp: string) => {
@@ -109,13 +127,13 @@ export function MarketInsights() {
         <Card>
             <CardHeader className="pb-2">
                 <CardTitle>Market Insights</CardTitle>
-                <CardDescription>Latest market news and analysis</CardDescription>
+                <CardDescription>Latest news for watchlist stocks</CardDescription>
             </CardHeader>
             <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {news.length === 0 ? (
                         <div className="col-span-3 text-center text-gray-500">
-                            <div>No news articles available at the moment</div>
+                            <div>No news articles available for watchlist stocks</div>
                         </div>
                     ) : (
                         news.map((item, index) => (
@@ -123,9 +141,12 @@ export function MarketInsights() {
                                 <div className="flex items-center justify-between">
                                     <Badge
                                         variant={getBadgeVariant(item.sentiment)}
-                                        className="text-xs"
+                                        className={`text-xs ${item.sentiment?.toLowerCase() === 'bullish'
+                                            ? 'bg-green-500 hover:bg-green-600 text-white border-transparent'
+                                            : ''
+                                            }`}
                                     >
-                                        {item.topics?.[0] || 'General'}
+                                        {getBadgeLabel(item.sentiment, item.topics?.[0] || 'General')}
                                     </Badge>
                                     <span className="text-xs text-muted-foreground">
                                         {getTimeAgo(item.timePublished)}
@@ -139,7 +160,7 @@ export function MarketInsights() {
                                 >
                                     {item.title}
                                 </a>
-                                <span className="text-xs text-gray-500">
+                                <span className="text-xs text-muted-foreground">
                                     Source: {item.source}
                                 </span>
                             </div>
