@@ -30,7 +30,12 @@ export async function GET(request: Request) {
                     .map(item => [item.link, {
                         title: item.title,
                         url: item.link,
-                        timePublished: new Date(item.providerPublishTime * 1000).toISOString(),
+                        timePublished: new Date(
+                            // Check if timestamp needs conversion to milliseconds
+                            String(item.providerPublishTime).length <= 10
+                                ? item.providerPublishTime * 1000  // Convert seconds to milliseconds
+                                : item.providerPublishTime         // Already in milliseconds
+                        ).toISOString(),
                         source: item.publisher,
                         topics: determineTopics(item.title),
                         sentiment: determineSentiment(item.title),

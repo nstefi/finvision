@@ -76,19 +76,15 @@ export function MarketInsights() {
         return topic
     }
 
-    const getTimeAgo = (timestamp: string) => {
-        const now = new Date()
-        const publishedDate = new Date(timestamp)
-        const diffInHours = Math.floor((now.getTime() - publishedDate.getTime()) / (1000 * 60 * 60))
+    const formatDateTime = (timestamp: string) => {
+        const date = new Date(timestamp)
+        const year = date.getFullYear()
+        const month = String(date.getMonth() + 1).padStart(2, '0')
+        const day = String(date.getDate()).padStart(2, '0')
+        const hours = String(date.getHours()).padStart(2, '0')
+        const minutes = String(date.getMinutes()).padStart(2, '0')
 
-        if (diffInHours < 24) {
-            return 'Today'
-        } else if (diffInHours < 48) {
-            return 'Yesterday'
-        } else {
-            const days = Math.floor(diffInHours / 24)
-            return `${days} days ago`
-        }
+        return `${year}-${month}-${day} ${hours}:${minutes}`
     }
 
     if (loading) {
@@ -138,7 +134,7 @@ export function MarketInsights() {
                     ) : (
                         news.map((item, index) => (
                             <div key={index} className="flex flex-col space-y-1">
-                                <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
                                     <Badge
                                         variant={getBadgeVariant(item.sentiment)}
                                         className={`text-xs ${item.sentiment?.toLowerCase() === 'bullish'
@@ -149,7 +145,7 @@ export function MarketInsights() {
                                         {getBadgeLabel(item.sentiment, item.topics?.[0] || 'General')}
                                     </Badge>
                                     <span className="text-xs text-muted-foreground">
-                                        {getTimeAgo(item.timePublished)}
+                                        {formatDateTime(item.timePublished)}
                                     </span>
                                 </div>
                                 <a
