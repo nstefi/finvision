@@ -1,5 +1,63 @@
 import { NextResponse } from 'next/server'
 import yahooFinance from 'yahoo-finance2'
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai'
+
+// Initialize Google AI Client
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || '')
+const model = genAI.getGenerativeModel({
+    model: "gemini-1.5-flash-latest", // Using the latest flash model
+    // Optional safety settings - adjust as needed
+    safetySettings: [
+        { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+        { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+        { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+        { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+    ]
+})
+
+// Function to get sentiment and topics using Google AI
+async function getAISentimentAndTopics(title: string): Promise<{ sentiment: string; topics: string[] }> {
+    const prompt = `
+        Analyze the sentiment and determine the primary topic for the following financial news headline.
+
+        Headline: "${title}"
+
+        Instructions:
+        1.  Determine the overall sentiment. Respond with one of: "Bullish", "Bearish", "Neutral", "Mixed".
+        2.  Determine the primary topic. Respond with one of: "Markets", "Economic", "Technology", "Earnings", "Crypto", "General".
+
+        Return the result as a valid JSON object with the keys "sentiment" and "topic".
+        Example:
+        {
+            "sentiment": "Bullish",
+            "topic": "Earnings"
+        }
+    `
+
+    try {
+        const result = await model.generateContent(prompt)
+        const response = result.response
+        let text = response.text()
+
+        // Clean the response to extract JSON
+        const jsonMatch = text.match(/\{.*\}/s)
+        if (jsonMatch && jsonMatch[0]) {
+            text = jsonMatch[0]
+        }
+
+        const analysis = JSON.parse(text)
+        return {
+            sentiment: analysis.sentiment || 'Neutral', // Default to Neutral
+            topics: [analysis.topic || 'General']      // Default to General
+        }
+    } catch (error) {
+        console.error(`Error analyzing title with AI: "${title}"`, error)
+        return { sentiment: 'Neutral', topics: ['General'] } // Fallback on error
+    }
+}
+
+// Utility function to add delay
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
 export async function GET(request: Request) {
     try {
@@ -21,32 +79,46 @@ export async function GET(request: Request) {
                 })
         )
 
-        const newsResults = await Promise.all(newsPromises)
+        let newsResults = await Promise.all(newsPromises)
+        newsResults = newsResults.flat()
 
-        // Flatten and deduplicate news by url
-        const uniqueNews = Array.from(
-            new Map(
-                newsResults.flat()
-                    .map(item => [item.link, {
-                        title: item.title,
-                        url: item.link,
-                        timePublished: new Date(
-                            // Check if timestamp needs conversion to milliseconds
-                            String(item.providerPublishTime).length <= 10
-                                ? item.providerPublishTime * 1000  // Convert seconds to milliseconds
-                                : item.providerPublishTime         // Already in milliseconds
-                        ).toISOString(),
-                        source: item.publisher,
-                        topics: determineTopics(item.title),
-                        sentiment: determineSentiment(item.title),
-                        relatedSymbols: symbols.filter(symbol =>
-                            item.title.includes(symbol) ||
-                            (symbol === '^GSPC' && (item.title.includes('S&P') || item.title.includes('S&P 500'))) ||
-                            (symbol === '^DJI' && (item.title.includes('Dow') || item.title.includes('DJIA')))
-                        )
-                    }])
-            ).values()
-        )
+        // Analyze sentiment and topics for each news item sequentially with delay
+        console.log(`Analyzing ${newsResults.length} news items with AI (sequentially)...`)
+        const analyses: { sentiment: string; topics: string[] }[] = []
+        for (const item of newsResults) {
+            // Add delay before each API call to respect rate limits
+            await sleep(4100) // ~4.1 seconds delay (keeps under 15 reqs/min)
+            const analysis = await getAISentimentAndTopics(item.title)
+            analyses.push(analysis)
+            console.log(`  Analyzed: "${item.title.substring(0, 50)}..." -> ${analysis.sentiment} / ${analysis.topics[0]}`)
+        }
+        console.log('AI analysis complete.')
+
+        // Combine news data with AI analysis and deduplicate
+        const uniqueNewsMap = new Map()
+        newsResults.forEach((item, index) => {
+            if (!uniqueNewsMap.has(item.link)) {
+                uniqueNewsMap.set(item.link, {
+                    title: item.title,
+                    url: item.link,
+                    timePublished: new Date(
+                        String(item.providerPublishTime).length <= 10
+                            ? item.providerPublishTime * 1000
+                            : item.providerPublishTime
+                    ).toISOString(),
+                    source: item.publisher,
+                    topics: analyses[index].topics,       // Use AI topics
+                    sentiment: analyses[index].sentiment, // Use AI sentiment
+                    relatedSymbols: symbols.filter(symbol =>
+                        item.title.includes(symbol) ||
+                        (symbol === '^GSPC' && (item.title.includes('S&P') || item.title.includes('S&P 500'))) ||
+                        (symbol === '^DJI' && (item.title.includes('Dow') || item.title.includes('DJIA')))
+                    )
+                })
+            }
+        })
+
+        const uniqueNews = Array.from(uniqueNewsMap.values())
 
         // Sort by publish time
         const sortedNews = uniqueNews.sort((a, b) =>
@@ -67,64 +139,4 @@ export async function GET(request: Request) {
             message: error instanceof Error ? error.message : 'Unknown error'
         }, { status: 500 })
     }
-}
-
-function determineTopics(title: string): string[] {
-    const lowerTitle = title.toLowerCase()
-
-    if (lowerTitle.includes('stock') || lowerTitle.includes('market') || lowerTitle.includes('index')) {
-        return ['Markets']
-    }
-    if (lowerTitle.includes('fed') || lowerTitle.includes('interest rate') || lowerTitle.includes('inflation')) {
-        return ['Economic']
-    }
-    if (lowerTitle.includes('tech') || lowerTitle.includes('technology')) {
-        return ['Technology']
-    }
-    if (lowerTitle.includes('earnings') || lowerTitle.includes('revenue')) {
-        return ['Earnings']
-    }
-    if (lowerTitle.includes('crypto') || lowerTitle.includes('bitcoin')) {
-        return ['Crypto']
-    }
-
-    return ['General']
-}
-
-function determineSentiment(title: string): string {
-    const lowerTitle = title.toLowerCase()
-
-    // Enhanced sentiment analysis with more comprehensive keyword lists
-    const bullishWords = [
-        'surge', 'jump', 'rise', 'gain', 'high', 'boost', 'growth',
-        'outperform', 'upgrade', 'beat', 'exceed', 'record', 'strong',
-        'positive', 'breakthrough', 'rally', 'recover', 'momentum'
-    ]
-    const bearishWords = [
-        'fall', 'drop', 'decline', 'low', 'loss', 'down', 'crash',
-        'plunge', 'tumble', 'downgrade', 'miss', 'weak', 'negative',
-        'concern', 'risk', 'volatile', 'pressure', 'struggle'
-    ]
-    const neutralWords = [
-        'hold', 'maintain', 'stable', 'steady', 'unchanged',
-        'flat', 'mixed', 'balance', 'consolidate'
-    ]
-
-    // Count occurrences of sentiment words
-    const bullishCount = bullishWords.filter(word => lowerTitle.includes(word)).length
-    const bearishCount = bearishWords.filter(word => lowerTitle.includes(word)).length
-    const neutralCount = neutralWords.filter(word => lowerTitle.includes(word)).length
-
-    // Determine sentiment based on word counts and specific patterns
-    if (bullishCount > bearishCount && bullishCount > neutralCount) {
-        return 'Bullish'
-    } else if (bearishCount > bullishCount && bearishCount > neutralCount) {
-        return 'Bearish'
-    } else if (neutralCount > bullishCount && neutralCount > bearishCount) {
-        return 'Neutral'
-    } else if (bullishCount === bearishCount) {
-        return 'Mixed'
-    }
-
-    return 'Neutral'
 } 
