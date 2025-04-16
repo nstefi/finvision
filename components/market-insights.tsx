@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { useMediaQuery } from "@/hooks/use-media-query"
+import { Loader2 } from "lucide-react"
 
 interface NewsItem {
     title: string
@@ -22,15 +23,33 @@ const watchlistSymbols = ["AAPL", "MSFT", "GOOGL", "AMZN"]
 
 interface MarketInsightsProps {
     page?: 'dashboard' | 'insights'
+    news: NewsItem[]
+    loading: boolean
+    error: string | null
+    watchlistOnly: boolean
+    useAIAnalysis: boolean
+    setNews: (news: NewsItem[]) => void
+    setLoading: (loading: boolean) => void
+    setError: (error: string | null) => void
+    setWatchlistOnly: (value: boolean) => void
+    setUseAIAnalysis: (value: boolean) => void
 }
 
-export function MarketInsights({ page = 'dashboard' }: MarketInsightsProps) {
-    const [news, setNews] = useState<NewsItem[]>([])
-    const [loading, setLoading] = useState(true)
-    const [error, setError] = useState<string | null>(null)
-    const [watchlistOnly, setWatchlistOnly] = useState(true)
-    const [useAIAnalysis, setUseAIAnalysis] = useState(false)
+export function MarketInsights({
+    page = 'dashboard',
+    news,
+    loading,
+    error,
+    watchlistOnly,
+    useAIAnalysis,
+    setNews,
+    setLoading,
+    setError,
+    setWatchlistOnly,
+    setUseAIAnalysis
+}: MarketInsightsProps) {
     const isMobile = useMediaQuery("(max-width: 768px)")
+    const [loadingAI, setLoadingAI] = useState(false)
 
     // Set news limits based on page and screen size
     const getNewsLimit = () => {
@@ -43,12 +62,14 @@ export function MarketInsights({ page = 'dashboard' }: MarketInsightsProps) {
 
     useEffect(() => {
         const fetchNews = async () => {
+            const isFetchingAI = page === 'insights' && useAIAnalysis
             try {
                 setLoading(true)
-                // Determine base query parameters
+                setError(null)
+                setLoadingAI(isFetchingAI)
+
                 let queryParams = watchlistOnly ? `?symbols=${watchlistSymbols.join(',')}` : ''
-                // Add AI parameter if on insights page and toggle is enabled
-                if (page === 'insights' && useAIAnalysis) {
+                if (isFetchingAI) {
                     queryParams += queryParams ? '&' : '?'
                     queryParams += 'useAI=true'
                 }
@@ -56,28 +77,22 @@ export function MarketInsights({ page = 'dashboard' }: MarketInsightsProps) {
                 const response = await fetch(`/api/yahoo-news${queryParams}`)
                 const data = await response.json()
 
-                if (!response.ok) {
-                    throw new Error(data.error || 'Failed to fetch news')
-                }
-
-                if (data.error) {
-                    throw new Error(data.error)
-                }
-
-                if (!Array.isArray(data)) {
-                    throw new Error('Invalid data format')
-                }
+                if (!response.ok) throw new Error(data.error || 'Failed to fetch news')
+                if (data.error) throw new Error(data.error)
+                if (!Array.isArray(data)) throw new Error('Invalid data format')
 
                 setNews(data)
             } catch (err) {
                 setError(err instanceof Error ? err.message : 'Failed to load news')
+                setNews([])
             } finally {
                 setLoading(false)
+                setLoadingAI(false)
             }
         }
 
         fetchNews()
-    }, [watchlistOnly, useAIAnalysis, page]) // Add useAIAnalysis and page to dependencies
+    }, [watchlistOnly, useAIAnalysis, page])
 
     const getBadgeVariant = (sentiment: string) => {
         switch (sentiment?.toLowerCase()) {
@@ -139,7 +154,7 @@ export function MarketInsights({ page = 'dashboard' }: MarketInsightsProps) {
             <Card>
                 <CardHeader className="pb-2">
                     <CardTitle>Market Insights</CardTitle>
-                    <CardDescription className="text-red-500">{error}</CardDescription>
+                    <CardDescription className="text-red-500">Error loading news: {error}</CardDescription>
                 </CardHeader>
             </Card>
         )
