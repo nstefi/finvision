@@ -60,55 +60,36 @@ export async function GET() {
     }
 
     try {
-        console.log('API Route: Fetching from Alpha Vantage (Simplified Topics)')
+        console.log('API Route: Fetching from Alpha Vantage')
         const apiUrl = `${NEWS_API_URL}?function=NEWS_SENTIMENT&topics=financial_markets&apikey=${ALPHA_VANTAGE_API_KEY}`
         console.log('API URL (without key):', apiUrl.replace(ALPHA_VANTAGE_API_KEY, 'HIDDEN'))
 
         const newsResponse = await fetch(apiUrl)
         console.log('API Response Status:', newsResponse.status)
-        console.log('API Response Headers:', Object.fromEntries(newsResponse.headers.entries()))
 
         const responseText = await newsResponse.text()
         console.log('Raw API Response:', responseText.substring(0, 500) + '...')
-
-        if (!newsResponse.ok) {
-            console.error('API Route: Alpha Vantage response not ok:', newsResponse.status)
-            // If API fails, use sample data for debugging
-            console.log('Using sample data for debugging (Simplified Topics Test)')
-            const newsItems = SAMPLE_NEWS.map(item => ({
-                title: item.title,
-                summary: item.summary,
-                url: item.url,
-                source: item.source,
-                timePublished: item.time_published,
-                sentiment: item.overall_sentiment_label,
-                topics: categorizeNews(item)
-            }))
-            return NextResponse.json(newsItems)
-        }
 
         let newsData
         try {
             newsData = JSON.parse(responseText)
         } catch (e) {
             console.error('Failed to parse JSON:', e)
-            throw new Error('Invalid JSON response from Alpha Vantage')
+            return NextResponse.json({ error: 'Invalid response from Alpha Vantage' }, { status: 500 })
         }
 
-        if (!newsData.feed || !Array.isArray(newsData.feed) || newsData.feed.length === 0) {
-            console.error('API Route: Invalid or empty data format received:', newsData)
-            // If invalid format or empty feed, use sample data for debugging
-            console.log('Using sample data due to invalid/empty format (Simplified Topics Test)')
-            const newsItems = SAMPLE_NEWS.map(item => ({
-                title: item.title,
-                summary: item.summary,
-                url: item.url,
-                source: item.source,
-                timePublished: item.time_published,
-                sentiment: item.overall_sentiment_label,
-                topics: categorizeNews(item)
-            }))
-            return NextResponse.json(newsItems)
+        // Check for rate limit message
+        if (newsData.Information && newsData.Information.includes('rate limit')) {
+            console.log('API Route: Rate limit reached')
+            return NextResponse.json({
+                error: 'API rate limit reached',
+                message: newsData.Information
+            }, { status: 429 })
+        }
+
+        if (!newsData.feed || !Array.isArray(newsData.feed)) {
+            console.error('API Route: Invalid data format received:', newsData)
+            return NextResponse.json({ error: 'Invalid data format from Alpha Vantage' }, { status: 500 })
         }
 
         const newsItems = newsData.feed.map((item: any) => ({
@@ -125,21 +106,13 @@ export async function GET() {
             new Date(b.timePublished).getTime() - new Date(a.timePublished).getTime()
         )
 
-        console.log(`API Route: Successfully processed ${newsItems.length} news items (Simplified Topics Test)`)
+        console.log(`API Route: Successfully processed ${newsItems.length} news items`)
         return NextResponse.json(newsItems)
     } catch (error) {
         console.error('API Route: Error details:', error)
-        // In case of any error, return sample data for debugging
-        console.log('Using sample data due to error (Simplified Topics Test)')
-        const newsItems = SAMPLE_NEWS.map(item => ({
-            title: item.title,
-            summary: item.summary,
-            url: item.url,
-            source: item.source,
-            timePublished: item.time_published,
-            sentiment: item.overall_sentiment_label,
-            topics: categorizeNews(item)
-        }))
-        return NextResponse.json(newsItems)
+        return NextResponse.json({
+            error: 'Failed to fetch news data',
+            message: error instanceof Error ? error.message : 'Unknown error'
+        }, { status: 500 })
     }
 } 
