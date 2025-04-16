@@ -27,7 +27,7 @@ export default function DashboardPage() {
           <StockPerformance />
         </div>
         <div className="mt-4">
-          <MarketInsights />
+          <MarketInsights page="dashboard" />
         </div>
       </WatchlistProvider>
 

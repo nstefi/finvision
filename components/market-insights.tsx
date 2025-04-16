@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
+import { useMediaQuery } from "@/hooks/use-media-query"
 
 interface NewsItem {
     title: string
@@ -17,16 +20,32 @@ interface NewsItem {
 // Define watchlist symbols (same as in WatchlistCard)
 const watchlistSymbols = ["AAPL", "MSFT", "GOOGL", "AMZN"]
 
-export function MarketInsights() {
+interface MarketInsightsProps {
+    page?: 'dashboard' | 'insights'
+}
+
+export function MarketInsights({ page = 'dashboard' }: MarketInsightsProps) {
     const [news, setNews] = useState<NewsItem[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const [watchlistOnly, setWatchlistOnly] = useState(true)
+    const isMobile = useMediaQuery("(max-width: 768px)")
+
+    // Set news limits based on page and screen size
+    const getNewsLimit = () => {
+        if (page === 'dashboard') {
+            return isMobile ? 8 : 12
+        } else { // insights page
+            return 24 // 8 rows of 3 on desktop, single column on mobile
+        }
+    }
 
     useEffect(() => {
         const fetchNews = async () => {
             try {
                 setLoading(true)
-                const queryParams = `?symbols=${watchlistSymbols.join(',')}`
+                // Only include symbols parameter if watchlistOnly is true
+                const queryParams = watchlistOnly ? `?symbols=${watchlistSymbols.join(',')}` : ''
                 const response = await fetch(`/api/yahoo-news${queryParams}`)
                 const data = await response.json()
 
@@ -51,7 +70,7 @@ export function MarketInsights() {
         }
 
         fetchNews()
-    }, [])
+    }, [watchlistOnly]) // Add watchlistOnly to dependency array
 
     const getBadgeVariant = (sentiment: string) => {
         switch (sentiment?.toLowerCase()) {
@@ -122,8 +141,22 @@ export function MarketInsights() {
     return (
         <Card>
             <CardHeader className="pb-2">
-                <CardTitle>Market Insights</CardTitle>
-                <CardDescription>Latest news for watchlist stocks</CardDescription>
+                <div className="flex items-center gap-3">
+                    <CardTitle>Market Insights</CardTitle>
+                    <div className="flex items-center space-x-2">
+                        <Switch
+                            id="watchlist-mode"
+                            checked={watchlistOnly}
+                            onCheckedChange={setWatchlistOnly}
+                        />
+                        <Label htmlFor="watchlist-mode" className="text-sm text-muted-foreground">
+                            {watchlistOnly ? 'Watchlist Only' : 'All Stocks'}
+                        </Label>
+                    </div>
+                </div>
+                <CardDescription>
+                    {watchlistOnly ? 'Latest news for watchlist stocks' : 'Latest market news'}
+                </CardDescription>
             </CardHeader>
             <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -132,7 +165,7 @@ export function MarketInsights() {
                             <div>No news articles available for watchlist stocks</div>
                         </div>
                     ) : (
-                        news.map((item, index) => (
+                        news.slice(0, getNewsLimit()).map((item, index) => (
                             <div key={index} className="flex flex-col space-y-1">
                                 <div className="flex items-center gap-2">
                                     <Badge

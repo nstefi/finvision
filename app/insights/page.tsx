@@ -7,7 +7,7 @@ export default function InsightsPage() {
     <DashboardShell>
       <DashboardHeader heading="Insights" text="Market insights and analysis." />
       <div className="mt-6">
-        <MarketInsights />
+        <MarketInsights page="insights" />
       </div>
     </DashboardShell>
   )
