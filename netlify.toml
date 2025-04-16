@@ -13,9 +13,14 @@
 
 [functions]
   node_bundler = "esbuild"
-  external_node_modules = ["@google/generative-ai"]
-  included_files = []
-  timeout = "30s"
 
 [[plugins]]
-  package = "@netlify/plugin-nextjs" 
+  package = "@netlify/plugin-nextjs"
+
+# Function-specific settings
+[functions."*"]
+  external_node_modules = ["@google/generative-ai"]
+  included_files = []
+
+[functions.config]
+  timeout_seconds = 30 
