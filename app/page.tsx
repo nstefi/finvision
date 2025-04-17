@@ -36,7 +36,10 @@ export default function DashboardPage() {
 
   return (
     <DashboardShell>
-      <DashboardHeader heading="Portfolio Dashboard" text="Track and analyze your financial portfolio performance." />
+      <DashboardHeader
+        heading="Financial Portfolio Dashboard with AI Insights"
+        text="Track and analyze your portfolio performance, enhanced with AI-powered market news analysis."
+      />
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <PortfolioOverview className="lg:col-span-2" />
         <AssetAllocation />
@@ -46,9 +49,13 @@ export default function DashboardPage() {
       </div>
 
       <WatchlistProvider>
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <WatchlistCard />
-          <StockPerformance />
+        <div className="mt-4 grid gap-4 md:grid-cols-3">
+          <div className="md:col-span-1">
+            <WatchlistCard />
+          </div>
+          <div className="md:col-span-2">
+            <StockPerformance />
+          </div>
         </div>
         <div className="mt-4">
           <MarketInsights
