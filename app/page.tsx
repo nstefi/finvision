@@ -49,13 +49,9 @@ export default function DashboardPage() {
       </div>
 
       <WatchlistProvider>
-        <div className="mt-4 grid gap-4 md:grid-cols-3">
-          <div className="md:col-span-1">
-            <WatchlistCard />
-          </div>
-          <div className="md:col-span-2">
-            <StockPerformance />
-          </div>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <WatchlistCard />
+          <StockPerformance />
         </div>
         <div className="mt-4">
           <MarketInsights
