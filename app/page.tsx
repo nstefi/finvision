@@ -11,6 +11,7 @@ import { MarketInsights } from "@/components/market-insights"
 import { WatchlistCard } from "@/components/watchlist-card"
 import { StockList } from "@/components/stock-list"
 import { WatchlistProvider } from "@/lib/context/watchlist-context"
+import { InsightsPrompt } from "@/components/insights-prompt"
 
 // --- Type Definition (reuse from components) ---
 interface NewsItem {
@@ -44,6 +45,11 @@ export default function DashboardPage() {
         <PortfolioOverview className="lg:col-span-2" />
         <AssetAllocation />
       </div>
+
+      <div className="mt-4">
+        <InsightsPrompt />
+      </div>
+
       <div className="mt-4">
         <StockList />
       </div>

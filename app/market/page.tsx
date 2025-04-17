@@ -4,7 +4,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { WatchlistProvider } from "@/lib/context/watchlist-context"
 import { WatchlistCard } from "@/components/watchlist-card"
 import { StockPerformance } from "@/components/stock-performance"
-import { NewsCard } from "@/components/news-card"
 
 export default function MarketPage() {
   return (
@@ -17,10 +16,6 @@ export default function MarketPage() {
           <StockPerformance />
         </div>
       </WatchlistProvider>
-
-      <div className="mt-8">
-        <NewsCard />
-      </div>
     </DashboardShell>
   )
 }
