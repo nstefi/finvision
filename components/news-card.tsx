@@ -1,16 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-
-interface NewsItem {
-    title: string
-    summary: string
-    url: string
-    source: string
-    timePublished: string
-    sentiment: string
-    topics: string[]
-}
+import { NewsItem } from "@/lib/types"
 
 export function NewsCard() {
     const [news, setNews] = useState<NewsItem[]>([])
@@ -20,15 +11,24 @@ export function NewsCard() {
     useEffect(() => {
         const fetchNews = async () => {
             try {
+                setLoading(true)
                 const response = await fetch('/api/news')
+
                 if (!response.ok) {
-                    throw new Error('Failed to fetch news')
+                    const errorText = await response.text()
+                    throw new Error(`Failed to fetch news: ${response.status} ${errorText.slice(0, 100)}`)
                 }
+
                 const data = await response.json()
+
+                if (!Array.isArray(data)) {
+                    throw new Error('Invalid data format received from server')
+                }
+
                 setNews(data)
             } catch (err) {
-                setError('Failed to load news')
-                console.error(err)
+                console.error("News fetch error:", err)
+                setError(err instanceof Error ? err.message : 'Failed to load news')
             } finally {
                 setLoading(false)
             }

@@ -9,10 +9,11 @@ import { useWatchlist } from "@/lib/context/watchlist-context"
 import { useEffect, useState } from "react"
 import { fetchLatestStockPrices } from "@/lib/actions/stock-actions"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { StockData } from "@/lib/types"
 
 export function WatchlistCard() {
   const { toggleStock, isSelected, addStock, watchlistStocks, removeStock, selectedStocks } = useWatchlist()
-  const [stockData, setStockData] = useState<Record<string, { price: number; change: number }>>({})
+  const [stockData, setStockData] = useState<Record<string, StockData>>({})
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isUsingSimulatedData, setIsUsingSimulatedData] = useState(false)
@@ -40,7 +41,7 @@ export function WatchlistCard() {
         const dataPromise = fetchLatestStockPrices(watchlistStocks)
         const data = (await Promise.race([dataPromise, timeoutPromise])) as Record<
           string,
-          { price: number; change: number }
+          StockData
         >
 
         if (!isMounted) return
@@ -82,9 +83,9 @@ export function WatchlistCard() {
   }, [watchlistStocks])
 
   function generateFallbackStockData(symbols: string[]) {
-    const result: Record<string, { price: number; change: number }> = {}
+    const result: Record<string, StockData> & { _simulated?: boolean } = {}
 
-    const stockProfiles: Record<string, { price: number; change: number }> = {
+    const stockProfiles: Record<string, StockData> = {
       AAPL: { price: 185.92, change: 1.25 },
       MSFT: { price: 408.35, change: 0.75 },
       GOOGL: { price: 161.25, change: -0.5 },
@@ -95,6 +96,7 @@ export function WatchlistCard() {
       result[symbol] = stockProfiles[symbol] || { price: 100, change: 0 }
     })
 
+    // Adding the _simulated property to the result object to indicate these are mock values
     result._simulated = true
     return result
   }

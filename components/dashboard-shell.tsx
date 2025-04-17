@@ -7,7 +7,6 @@ import { MainNav } from "@/components/main-nav"
 import { DashboardNav } from "@/components/dashboard-nav"
 import { UserNav } from "@/components/user-nav"
 import { ModeToggle } from "@/components/mode-toggle"
-import { ReactVersion } from "@/components/react-version"
 import { Menu } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -59,7 +58,7 @@ function DashboardShellContent({ children }: DashboardShellProps) {
         </div>
         <main className="flex-1 space-y-4 p-4 pt-6 md:p-8">{children}</main>
         <footer className="border-t p-4 text-center">
-          <ReactVersion />
+          {/* Footer content if needed */}
         </footer>
       </div>
     </div>

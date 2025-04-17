@@ -26,12 +26,16 @@ export async function GET(request: NextRequest) {
         const period = searchParams.get('period') || '1m';
 
         if (!symbols) {
-            return NextResponse.json({ error: "No symbols provided" }, { status: 400 });
+            console.error("API Error: No symbols provided in request");
+            return NextResponse.json({
+                error: "No symbols provided",
+                message: "Please provide at least one stock symbol"
+            }, { status: 400 });
         }
 
-        console.log(`API route fetching data for: ${symbols}, period: ${period}`);
-
         const symbolList = symbols.split(',');
+        console.log(`API route fetching data for: ${symbolList.join(', ')}, period: ${period}`);
+
         const queryOptions = {
             period1: getStartDateFromPeriod(period),
             interval: "1d" as const
@@ -61,17 +65,31 @@ export async function GET(request: NextRequest) {
                     console.error(`Error fetching data for ${symbol}:`, error);
                     return {
                         symbol,
-                        data: []
+                        data: [],
+                        error: true
                     };
                 }
             })
         );
 
+        // Check if all symbols failed
+        const allFailed = results.every(result => result.data.length === 0);
+        if (allFailed) {
+            console.error("API Error: No data available for any of the requested symbols");
+            return NextResponse.json({
+                error: "No historical data available",
+                message: "Could not retrieve data for any of the selected symbols",
+                symbols: symbolList
+            }, { status: 404 });
+        }
+
         // Check if we got any data
         const hasData = results.some(result => result.data.length > 0);
         if (!hasData) {
+            console.error("API Error: No historical data available");
             return NextResponse.json({
-                error: "No historical data available for the selected symbols"
+                error: "No historical data available for the selected symbols",
+                message: "Please try a different time period or different symbols"
             }, { status: 404 });
         }
 
@@ -112,7 +130,9 @@ export async function GET(request: NextRequest) {
     } catch (error: any) {
         console.error('Error fetching stock data:', error);
         return NextResponse.json({
-            error: `Failed to fetch stock data: ${error.message || "Unknown error"}`
+            error: "Failed to fetch stock data",
+            message: error.message || "An unexpected error occurred",
+            status: "error"
         }, { status: 500 });
     }
 } 

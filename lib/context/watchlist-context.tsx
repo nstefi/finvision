@@ -1,6 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, type ReactNode } from "react"
+import { DEFAULT_WATCHLIST_STOCKS } from "@/lib/types"
 
 interface WatchlistContextType {
   selectedStocks: string[]
@@ -15,7 +16,7 @@ const WatchlistContext = createContext<WatchlistContextType | undefined>(undefin
 
 export function WatchlistProvider({ children }: { children: ReactNode }) {
   const [selectedStocks, setSelectedStocks] = useState<string[]>([]) // Start with empty selection
-  const [watchlistStocks, setWatchlistStocks] = useState<string[]>(["AAPL", "MSFT", "GOOGL", "AMZN"])
+  const [watchlistStocks, setWatchlistStocks] = useState<string[]>(DEFAULT_WATCHLIST_STOCKS)
 
   const toggleStock = (symbol: string) => {
     setSelectedStocks((prev) => (prev.includes(symbol) ? prev.filter((s) => s !== symbol) : [...prev, symbol]))

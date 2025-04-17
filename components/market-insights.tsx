@@ -7,19 +7,7 @@ import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { Loader2 } from "lucide-react"
-
-interface NewsItem {
-    title: string
-    url: string
-    timePublished: string
-    topics: string[]
-    sentiment: string
-    source: string
-    relatedSymbols: string[]
-}
-
-// Define watchlist symbols (same as in WatchlistCard)
-const watchlistSymbols = ["AAPL", "MSFT", "GOOGL", "AMZN"]
+import { NewsItem, DEFAULT_WATCHLIST_STOCKS } from "@/lib/types"
 
 interface MarketInsightsProps {
     page?: 'dashboard' | 'insights'
@@ -68,21 +56,35 @@ export function MarketInsights({
                 setError(null)
                 setLoadingAI(isFetchingAI)
 
-                let queryParams = watchlistOnly ? `?symbols=${watchlistSymbols.join(',')}` : ''
+                let queryParams = watchlistOnly ? `?symbols=${DEFAULT_WATCHLIST_STOCKS.join(',')}` : ''
                 if (isFetchingAI) {
                     queryParams += queryParams ? '&' : '?'
                     queryParams += 'useAI=true'
                 }
 
                 const response = await fetch(`/api/yahoo-news${queryParams}`)
+
+                if (!response.ok) {
+                    const errorText = await response.text()
+                    try {
+                        // Try to parse as JSON
+                        const errorJson = JSON.parse(errorText)
+                        throw new Error(errorJson.error || `Server error: ${response.status}`)
+                    } catch (parseError) {
+                        // If not JSON, use the text
+                        throw new Error(`Failed to fetch news: ${response.status} ${errorText.slice(0, 100)}`)
+                    }
+                }
+
                 const data = await response.json()
 
-                if (!response.ok) throw new Error(data.error || 'Failed to fetch news')
-                if (data.error) throw new Error(data.error)
-                if (!Array.isArray(data)) throw new Error('Invalid data format')
+                if (!Array.isArray(data)) {
+                    throw new Error('Invalid data format received from server')
+                }
 
                 setNews(data)
             } catch (err) {
+                console.error("News fetch error:", err)
                 setError(err instanceof Error ? err.message : 'Failed to load news')
                 setNews([])
             } finally {
@@ -92,7 +94,7 @@ export function MarketInsights({
         }
 
         fetchNews()
-    }, [watchlistOnly, useAIAnalysis, page])
+    }, [watchlistOnly, useAIAnalysis, page, setError, setLoading, setNews])
 
     const getBadgeVariant = (sentiment: string) => {
         switch (sentiment?.toLowerCase()) {
