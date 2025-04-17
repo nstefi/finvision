@@ -166,12 +166,12 @@ export function StockChart({
             const stop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop')
             stop1.setAttribute('offset', '0%')
             stop1.setAttribute('stop-color', color)
-            stop1.setAttribute('stop-opacity', '0.2')
+            stop1.setAttribute('stop-opacity', isDark ? '0.4' : '0.2')
 
             const stop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop')
             stop2.setAttribute('offset', '100%')
             stop2.setAttribute('stop-color', color)
-            stop2.setAttribute('stop-opacity', '0')
+            stop2.setAttribute('stop-opacity', isDark ? '0.1' : '0')
 
             gradient.appendChild(stop1)
             gradient.appendChild(stop2)
@@ -196,7 +196,7 @@ export function StockChart({
             const lineData = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ')
             linePath.setAttribute('d', lineData)
             linePath.setAttribute('stroke', color)
-            linePath.setAttribute('stroke-width', '2')
+            linePath.setAttribute('stroke-width', isDark ? '3' : '2')
             linePath.setAttribute('fill', 'none')
             g.appendChild(linePath)
         })
