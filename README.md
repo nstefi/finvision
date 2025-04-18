@@ -1,36 +1,78 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Financial Portfolio Dashboard with AI Insights
 
-## Getting Started
+Track and analyze your portfolio performance, enhanced with AI-powered market news analysis.
 
-First, run the development server:
+## Overview
+
+**FinVision** is a comprehensive financial dashboard built to help investors monitor their portfolios with precision and gain AI-enhanced market insights. The application delivers real-time visualization of portfolio performance, stock comparisons, and intelligent news analysis to inform investment decisions.
+
+Developed as a submission for the **Frontend UI Hackathon 2025 #2**, on the topic of "Build a financial portfolio dashboard with stock performance charts."
+
+## Key Features
+
+- **Portfolio Overview & Analytics**  
+  Interactive visualization of portfolio value, asset allocation, and performance metrics with comparison against market benchmarks.
+
+- **Stock Performance Visualization**  
+  Dynamic, responsive charts for tracking historical price movements of portfolio holdings and watchlist stocks.
+
+- **AI-Powered News Analysis**  
+  Intelligent classification of financial news using Google's Gemini AI, with sentiment analysis tailored to your portfolio holdings.
+
+- **Customizable Watchlist**  
+  Track and compare multiple stocks side-by-side with color-coded performance indicators and seamless Yahoo Finance integration.
+
+- **Detailed Transaction History**  
+  Comprehensive log of buy/sell activities with filtering options and performance impact indicators.
+
+- **Responsive Design**  
+  Fully responsive interface optimized for both desktop and mobile experiences, with dark mode support.
+
+## Live Demo
+
+Experience the dashboard:  
+[https://outlier-finvision.netlify.app](https://outlier-finvision.netlify.app)
+
+## Technical Implementation
+
+### Architecture
+- **Frontend:** React 19, Next.js 14, TypeScript
+- **UI Framework:** Tailwind CSS with shadcn/ui components
+- **State Management:** React Context API with custom hooks
+- **Data Visualization:** Custom SVG-based charts with theme awareness
+- **API Integration:** Server-side API routes with error handling and fallbacks
+
+### Data Sources
+- **Market Data:** Yahoo Finance API integration for real-time stock prices and historical data
+- **News Analysis:** Google Gemini AI for sentiment analysis and topic classification of financial news
+- **Portfolio Data:** Simulated portfolio data with realistic market behavior
+
+## Development
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+# Install dependencies
+pnpm install
+
+# Start the development server
 pnpm dev
-# or
-bun dev
+
+# Build for production
+pnpm build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Technical Highlights
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **Optimized Performance:** Client-side caching and lazy-loading for responsive data visualization
+- **Fallback Mechanisms:** Graceful degradation with simulated data when API limits are reached
+- **Color-Blind Accessible:** Carefully selected color palettes that work in both light and dark modes
+- **Progressive Enhancement:** Core functionality works even with limited JavaScript support
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Hackathon Submission
 
-## Learn More
+Submitted for the **Frontend UI Hackathon 2025 #2**, focused on creating an intuitive and insightful financial dashboard experience.
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+*Developed by Istvan (Steven) Nagy*
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+*© 2025 FinVision*
